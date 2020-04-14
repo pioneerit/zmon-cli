@@ -100,6 +100,40 @@ def filter_check_definitions(obj, field, value, output, pretty):
         act.echo(filtered)
 
 
+
+def filter_list_dict(value, item):
+    if item.__class__ == list:
+        for record in item:
+            for key in record:
+                if value in key or value in record[key]:
+                    return True
+    return False
+
+
+
+@check_definitions.command('filterall')
+@click.argument('field')
+@click.argument('value')
+@click.pass_obj
+@output_option
+@pretty_json
+def filter_check_definitions(obj, field, value, output, pretty):
+    """Filter active check definitions"""
+    client = get_client(obj.config)
+
+    with Output('Retrieving and filtering check definitions ...', nl=True, output=output, pretty_json=pretty,
+                printer=render_checks) as act:
+        checks = client.get_check_definitions()
+
+        filtered = [check for check in checks if (value in check.get(field)) \
+                    or (filter_list_dict(value, check.get(field)))]
+
+        for check in filtered:
+            check['link'] = client.check_definition_url(check)
+
+        act.echo(filtered)
+
+
 @check_definitions.command('update')
 @click.argument('yaml_file', type=click.File('rb'))
 @click.option('--skip-validation', is_flag=True, help='Skip check command syntax validation.')
